@@ -41,6 +41,7 @@ public class UserController {
 
   @Operation(summary = "Cập nhật thông tin người dùng")
   @PutMapping("/{id}")
+  @PreAuthorize("hasAuthority('UPDATE')")
   public ResponseEntity<BaseResponse<UserResponse>> updateUser(@PathVariable(name = "id") Long id,
       @RequestBody UserDto userDto) {
     log.info("Received update request for user id: {}, roles: {}", id,

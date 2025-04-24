@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.method.P;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -48,6 +47,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         String username = jwtTokenProvider.getUsername(token);
         User user = userRepository.findByUsernameAndDeletedAtIsNull(username);
         List<GrantedAuthority> authorities = jwtTokenProvider.getAuthorities(token);
+        // get all authorities in token
 
         if (user != null) {
           UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
@@ -56,7 +56,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
           SecurityContextHolder.getContext().setAuthentication(authentication);
         }
       } else {
-        System.out.println("Invalid jưt token");
+        System.out.println("Invalid jwt token");
       }
     } catch (Exception e) {
       System.out.println("Error processing token: " + e.getMessage());
@@ -68,6 +68,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
   private String resolveToken(HttpServletRequest request) {
     String bearerToken = request.getHeader("Authorization");
+    // add Bearer before token
     if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
       return bearerToken.substring(7);
     }
