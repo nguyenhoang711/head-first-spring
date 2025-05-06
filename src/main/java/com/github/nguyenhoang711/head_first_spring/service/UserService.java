@@ -111,7 +111,6 @@ public class UserService {
     }
 
     userResponse.setRoles(roleNames);
-    // userResponse.setRolePermissions(rolePermissionsMap);
 
     Set<String> allPermissions = new HashSet<>();
     user.getRoles()

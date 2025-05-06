@@ -13,3 +13,16 @@ services:
       - ./pom.xml:/app/pom.xml
       - ~/.m2:/root/.m2
     restart: always
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: always
+
+volumes:
+  redis-data:

@@ -3,6 +3,7 @@ package com.github.nguyenhoang711.head_first_spring.security;
 import java.io.IOException;
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -20,6 +21,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 @Component
+@Slf4j
 public class JwtTokenFilter extends OncePerRequestFilter {
 
   @Autowired
@@ -31,16 +33,9 @@ public class JwtTokenFilter extends OncePerRequestFilter {
   @Override
   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
-    String requestURI = request.getRequestURI();
-
-    if (requestURI.startsWith("/api/v1/auth/") || requestURI.startsWith("/swagger-ui/")
-        || requestURI.startsWith("/v3/api-docs/")) {
-      filterChain.doFilter(request, response);
-      return;
-    }
 
     String token = resolveToken(request);
-    System.out.println("Token: " + token);
+    log.info("Token: {}", token);
 
     try {
       if (token != null && jwtTokenProvider.validateToken(token)) {
@@ -56,10 +51,10 @@ public class JwtTokenFilter extends OncePerRequestFilter {
           SecurityContextHolder.getContext().setAuthentication(authentication);
         }
       } else {
-        System.out.println("Invalid jwt token");
+        log.info("Invalid token or token is not exist");
       }
     } catch (Exception e) {
-      System.out.println("Error processing token: " + e.getMessage());
+      log.error("Error processing token: {}", e.getMessage());
       SecurityContextHolder.clearContext();
     }
 
