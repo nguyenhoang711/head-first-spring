@@ -38,7 +38,8 @@ public class SecurityConfig {
                         "/auth/verify-register",
                         "/auth/forgot-password",
                         "/auth/reset-password")
-                .permitAll()            .anyRequest().authenticated())
+                .permitAll()
+                .anyRequest().authenticated())
         .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();

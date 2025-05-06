@@ -6,8 +6,7 @@ import java.util.Random;
 import java.util.Set;
 
 import com.github.nguyenhoang711.head_first_spring.constant.OtpType;
-import com.github.nguyenhoang711.head_first_spring.dto.request.RegisterDto;
-import com.github.nguyenhoang711.head_first_spring.dto.request.VerifyOtpDto;
+import com.github.nguyenhoang711.head_first_spring.dto.request.*;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -16,7 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.github.nguyenhoang711.head_first_spring.constant.CommonMsg;
-import com.github.nguyenhoang711.head_first_spring.dto.request.LoginDto;
 import com.github.nguyenhoang711.head_first_spring.dto.response.BaseResponse;
 import com.github.nguyenhoang711.head_first_spring.dto.response.LoginResponse;
 import com.github.nguyenhoang711.head_first_spring.dto.response.UserResponse;
@@ -26,6 +24,8 @@ import com.github.nguyenhoang711.head_first_spring.repository.RoleRepository;
 import com.github.nguyenhoang711.head_first_spring.repository.UserRepository;
 import com.github.nguyenhoang711.head_first_spring.security.JwtTokenProvider;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -214,5 +214,79 @@ public class AuthService {
     userResponse.setPermissions(new ArrayList<>(permissionsSet));
 
     return userResponse;
+  }
+
+  public BaseResponse<?> changePassword(ChangePasswordDto changePasswordDto){
+    // 1. handle old password and new password
+    String oldPassword = changePasswordDto.getOldPassword();
+    String newPassword = changePasswordDto.getNewPassword();
+    if (oldPassword == null || oldPassword.trim().isEmpty()) {
+      return BaseResponse.error(CommonMsg.PASSWORD_IS_NOT_BLANK);
+    }
+    if (newPassword == null || newPassword.trim().isEmpty()) {
+      return BaseResponse.error(CommonMsg.PASSWORD_IS_NOT_BLANK);
+    }
+    // 2. authentication
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    User user = userRepository.findByUsernameAndDeletedAtIsNull(authentication.getName());
+    if (user == null) {
+      return BaseResponse.error(CommonMsg.USER_NOT_FOUND);
+    }
+    if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+      return BaseResponse.error(CommonMsg.OLD_PASSWORD_IS_NOT_CORRECT);
+    }
+    // 3. check old password same with new one
+    if (oldPassword.equals(newPassword)) {
+      return BaseResponse.error(CommonMsg.NEW_PASSWORD_IS_NOT_DIFFERENT);
+    }
+
+    redisService.deleteToken(user.getUsername());
+    redisService.deleteUserInfo(user.getUsername());
+    user.setPassword(passwordEncoder.encode(newPassword));
+    userRepository.save(user);
+
+    return BaseResponse.success(CommonMsg.CHANGE_PASSWORD_SUCCESS, null);
+  }
+
+  public BaseResponse<?> forgotPassword(ForgotPasswordDto forgotPasswordDto) {
+    // 1. check user exist or not
+    User user = userRepository.findByUsernameAndDeletedAtIsNull(forgotPasswordDto.getUsername());
+    if (user == null) {
+      return BaseResponse.error(CommonMsg.USER_NOT_FOUND);
+    }
+    // 2. send OTP
+    String otp = String.format("%06d", new Random().nextInt(999999));
+    try {
+      otpService.saveOtp(forgotPasswordDto.getUsername(), otp, 300, OtpType.RESET_PASSWORD);
+
+      try {
+        emailService.sendOtpEmail(user.getEmail(), otp, OtpType.RESET_PASSWORD);
+      } catch (Exception e) {
+        throw new RuntimeException(CommonMsg.SEND_OTP_FAILED + ": " + e.getMessage());
+      }
+    } catch (Exception e) {
+      // Rollback thủ công cho Redis
+      otpService.deleteOtp(forgotPasswordDto.getUsername());
+      return BaseResponse.error(CommonMsg.SEND_OTP_FAILED);
+    }
+
+    return BaseResponse.success(CommonMsg.SEND_OTP_SUCCESS, null);
+  }
+
+  public BaseResponse<?> resetPassword(ResetPasswordDto resetPasswordDto) {
+    User user = userRepository.findByUsernameAndDeletedAtIsNull(resetPasswordDto.getUsername());
+    if (user == null) {
+      return BaseResponse.error(CommonMsg.USER_NOT_FOUND);
+    }
+    if (!otpService.validateOtp(resetPasswordDto.getUsername(), resetPasswordDto.getOtp(), OtpType.RESET_PASSWORD)) {
+      return BaseResponse.error(CommonMsg.OTP_NOT_CORRECT);
+    }
+    redisService.deleteToken(resetPasswordDto.getUsername());
+    redisService.deleteUserInfo(resetPasswordDto.getUsername());
+
+    user.setPassword(passwordEncoder.encode(resetPasswordDto.getNewPassword()));
+    userRepository.save(user);
+
+    return BaseResponse.success(CommonMsg.RESET_PASSWORD_SUCCESS, null);
   }
 }

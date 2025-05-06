@@ -1,18 +1,13 @@
 package com.github.nguyenhoang711.head_first_spring.controller;
 
-import com.github.nguyenhoang711.head_first_spring.dto.request.RegisterDto;
-import com.github.nguyenhoang711.head_first_spring.dto.request.VerifyOtpDto;
+import com.github.nguyenhoang711.head_first_spring.dto.request.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import com.github.nguyenhoang711.head_first_spring.dto.request.LoginDto;
 import com.github.nguyenhoang711.head_first_spring.service.AuthService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -49,5 +44,20 @@ public class AuthController {
   public ResponseEntity<?> logout(HttpServletRequest request) {
     String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
     return ResponseEntity.ok(authService.logout(authHeader));
+  }
+
+  @PutMapping("/change-password")
+  public ResponseEntity<?> changePassword(@RequestBody ChangePasswordDto request) {
+    return ResponseEntity.ok(authService.changePassword(request));
+  }
+
+  @PostMapping("/forgot-password")
+  public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordDto request) {
+    return ResponseEntity.ok(authService.forgotPassword(request));
+  }
+
+  @PutMapping("/reset-password")
+  public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordDto request) {
+    return ResponseEntity.ok(authService.resetPassword(request));
   }
 }
